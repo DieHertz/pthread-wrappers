@@ -2,20 +2,22 @@
 #define synchronous_h
 
 #include "mutex.h"
+#include <iostream>
 
 namespace utility {
 
-template<class T> class synchronous {
-    T t;
+template<typename T> class synchronous {
+    template<typename U> struct container { U u; };
+    mutable container<T> t;
     mutable mutex m;
 
 public:
-    synchronous(T t = T{}) : t(t) {}
+    synchronous(T t = T{}) : t{t} {}
 
     template<typename F>
-    auto operator()(F func) const -> decltype(func(t)) {
+    auto operator()(F func) const -> decltype(func(t.u)) {
         lock_guard<mutex> _{ m };
-        return func(t);
+        return func(t.u);
     }
 };
 

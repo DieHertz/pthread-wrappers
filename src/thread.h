@@ -1,7 +1,6 @@
 #ifndef thread_h
 #define thread_h
 
-#include "mutex.h"
 #include <pthread.h>
 #include <functional>
 #include <stdexcept>
@@ -10,24 +9,19 @@ namespace utility {
 
 class thread {
 public:
-    thread(thread&& other) noexcept : pimpl{new impl} {
+    thread(thread&& other) noexcept {
         *this = std::move(other);
     }
 
     template<class Function, class... Args>
-    explicit thread(Function&& f, Args&&... args)
-    : pimpl{new impl} {
+    explicit thread(Function&& f, Args&&... args) {
         auto pimpl = this->pimpl;
 
         pimpl->func = [=] {
-            {
-                lock_guard<mutex> hold(pimpl->m);
-                pimpl->running = pimpl->joinable = true;
-            }
+            pimpl->running = pimpl->joinable = true;
 
             f(args...);
 
-            lock_guard<mutex> hold(pimpl->m);
             pimpl->running = false;
         };
 
@@ -58,7 +52,6 @@ public:
 
     void join() {
         pthread_join(pimpl->handle, nullptr);
-        lock_guard<mutex> hold(pimpl->m);
         pimpl->joinable = false;
     }
 
@@ -66,14 +59,12 @@ public:
 
 private:
     struct impl {
-        mutex m;
+        pthread_t handle;
         bool running = false;
         bool joinable = false;
-        pthread_t handle;
         std::function<void(void)> func;
     };
-    impl* pimpl;
-    
+    impl* pimpl = new impl{};
 };
 
 } /* namespace utility */

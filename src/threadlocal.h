@@ -73,6 +73,7 @@ public:
 private:
     pthread_key_t key;
 };
+
 } /* namespace utility */
 
 #endif /* threadlocal_h */
