@@ -1,6 +1,7 @@
 #ifndef thread_h
 #define thread_h
 
+#include "utility.h"
 #include <pthread.h>
 #include <functional>
 #include <stdexcept>
@@ -10,7 +11,7 @@ namespace utility {
 class thread {
 public:
     thread(thread&& other) noexcept {
-        *this = std::move(other);
+        *this = move(other);
     }
 
     template<class Function, class... Args>
@@ -18,7 +19,7 @@ public:
         auto pimpl = this->pimpl;
 
         pimpl->func = [=] {
-            pimpl->running = pimpl->joinable = true;
+            pimpl->joinable = pimpl->running = true;
 
             f(args...);
 
@@ -34,7 +35,7 @@ public:
     }
 
     ~thread() {
-        if (joinable()) std::terminate();
+        if (joinable() || pimpl->running) std::terminate();
 
         delete pimpl;
     }
@@ -51,8 +52,14 @@ public:
     }
 
     void join() {
+        if (!joinable()) throw std::runtime_error{"invalid_argument"};
         pthread_join(pimpl->handle, nullptr);
         pimpl->joinable = false;
+    }
+
+    void detach() {
+        if (!joinable()) throw std::runtime_error{"invalid_argument"};
+        pthread_detach(pimpl->handle);
     }
 
     bool joinable() const { return pimpl->joinable; }
@@ -60,8 +67,8 @@ public:
 private:
     struct impl {
         pthread_t handle;
-        bool running = false;
         bool joinable = false;
+        bool running = false;
         std::function<void(void)> func;
     };
     impl* pimpl = new impl{};

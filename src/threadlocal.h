@@ -1,8 +1,8 @@
 #ifndef threadlocal_h
 #define threadlocal_h
 
+#include "utility.h"
 #include <pthread.h>
-#include <utility>
 
 namespace utility {
 
@@ -41,7 +41,7 @@ public:
         for current thread
     */ 
     template<typename U> threadlocal& operator=(U&& other) {
-        set(std::forward<U>(other));
+        set(forward<U>(other));
         return *this;
     }
 
@@ -59,7 +59,7 @@ public:
 
     template<typename U> void set(U&& other) {
         delete get_pointer();
-        pthread_setspecific(key, new T{std::forward<U>(other)});
+        pthread_setspecific(key, new T{forward<U>(other)});
     }
 
     stored_type& get() {
