@@ -1,16 +1,10 @@
 #ifndef utility_h
 #define utility_h
 
+#include "type_traits.h"
+
 namespace utility {
 
-template<typename T> struct is_lvalue_reference { static constexpr auto value = false; };
-template<typename T> struct is_lvalue_reference<T&> { static constexpr auto value = true; };
-
-template<typename T> struct is_rvalue_reference { static constexpr auto value = false; };
-template<typename T> struct is_rvalue_reference<T&&> { static constexpr auto value = true; };
-
-template<typename T> struct remove_reference { using type = T; };
-template<typename T> struct remove_reference<T&> { using type = T; };
 template<typename T> struct remove_reference<T&&> { using type = T; };
 
 /**
