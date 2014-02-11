@@ -11,6 +11,7 @@ template<typename T> struct is_rvalue_reference<T&&> { static constexpr auto val
 
 template<typename T> struct remove_reference { using type = T; };
 template<typename T> struct remove_reference<T&> { using type = T; };
+template<typename T> struct remove_reference<T&&> { using type = T; };
 
 template<typename T> struct remove_const { using type = T; };
 template<typename T> struct remove_const<const T> { using type = T; };

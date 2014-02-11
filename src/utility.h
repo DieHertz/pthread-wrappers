@@ -5,8 +5,6 @@
 
 namespace utility {
 
-template<typename T> struct remove_reference<T&&> { using type = T; };
-
 /**
     \fn move
     \brief std::move implementation for compilers without <utility> header
