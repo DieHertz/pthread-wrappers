@@ -18,24 +18,22 @@ public:
     explicit thread(Function&& f, Args&&... args) {
         auto pimpl = this->pimpl;
 
-        pimpl->func = [=] {
-            pimpl->joinable = pimpl->running = true;
+        pimpl->func = [=] { call(f, args...); };
 
-            f(args...);
+        pimpl->joinable = true;
+        auto result = pthread_create(&pimpl->handle, nullptr, [] (void* pimpl_) {
+            auto pimpl = static_cast<impl*>(pimpl_);
+            pimpl->func();
+            delete pimpl;
 
-            pimpl->running = false;
-        };
-
-        auto result = pthread_create(&pimpl->handle, nullptr, [] (void* pimpl) {
-            static_cast<impl*>(pimpl)->func();
-            return pimpl;
+            return static_cast<void*>(nullptr);
         }, pimpl);
 
         if (result) throw std::runtime_error{"pthread_create failed"};
     }
 
     ~thread() {
-        if (joinable() || pimpl->running) std::terminate();
+        if (joinable()) std::terminate();
 
         delete pimpl;
     }
@@ -60,15 +58,26 @@ public:
     void detach() {
         if (!joinable()) throw std::runtime_error{"invalid_argument"};
         pthread_detach(pimpl->handle);
+        pimpl->joinable = false;
+        pimpl = nullptr;
     }
 
-    bool joinable() const { return pimpl->joinable; }
+    bool joinable() const { return pimpl && pimpl->joinable; }
 
 private:
+    template<class Function, class... Args>
+    static void call(Function&& f, Args&&... args) {
+        f(args...);
+    }
+
+    template<class R, class Object, class... Args1, class... Args2>
+    static void call(R (Object::*f)(Args1...), Object* obj, Args2&&... args) {
+        (obj->*f)(args...);
+    }
+
     struct impl {
         pthread_t handle;
         bool joinable = false;
-        bool running = false;
         std::function<void(void)> func;
     };
     impl* pimpl = new impl{};
