@@ -5,64 +5,89 @@
 #include <pthread.h>
 #include <functional>
 #include <stdexcept>
+#include <memory>
 
 namespace utility {
 
 class thread {
 public:
+    using native_handle_type = pthread_t;
+
+    class id {
+        native_handle_type handle{};
+
+    public:
+        id() noexcept {}
+        explicit id(native_handle_type handle) : handle{handle} {}
+
+    private:
+        friend class thread;
+
+        friend bool operator==(thread::id lhs, thread::id rhs) noexcept {
+            return lhs.handle == rhs.handle;
+        }
+
+        friend bool operator<(thread::id lhs, thread::id rhs) noexcept {
+            return lhs.handle < rhs.handle;
+        }
+    };
+
     thread(thread&& other) noexcept {
         *this = move(other);
     }
 
     template<class Function, class... Args>
     explicit thread(Function&& f, Args&&... args) {
-        auto pimpl = this->pimpl;
+        auto pimpl = std::make_shared<impl>();
 
         pimpl->func = [=] { call(f, args...); };
+        pimpl->this_ptr = pimpl;
 
-        pimpl->joinable = true;
-        auto result = pthread_create(&pimpl->handle, nullptr, [] (void* pimpl_) {
+        auto result = pthread_create(&id_.handle, nullptr, [] (void* pimpl_) {
             auto pimpl = static_cast<impl*>(pimpl_);
             pimpl->func();
-            delete pimpl;
-
+            pimpl->this_ptr.reset();
             return static_cast<void*>(nullptr);
-        }, pimpl);
+        }, pimpl.get());
 
-        if (result) throw std::runtime_error{"pthread_create failed"};
+        if (result) {
+            pimpl->this_ptr.reset();
+            throw std::runtime_error{"resources_unavailable_try_again"};
+        }
     }
 
     ~thread() {
         if (joinable()) std::terminate();
-
-        delete pimpl;
     }
 
     thread() = default;
     thread(const thread&) = delete;
 
     thread& operator=(thread&& other) noexcept {
-        if (joinable()) throw std::runtime_error{"moving to joinable thread"};
+        if (joinable()) std::terminate();
 
-        std::swap(pimpl, other.pimpl);
+        std::swap(id_, other.id_);
 
         return *this;
     }
 
+    bool joinable() const noexcept { return !(id_ == id{}); }
+
     void join() {
         if (!joinable()) throw std::runtime_error{"invalid_argument"};
-        pthread_join(pimpl->handle, nullptr);
-        pimpl->joinable = false;
+        pthread_join(id_.handle, nullptr);
+        id_ = id{};
     }
 
     void detach() {
         if (!joinable()) throw std::runtime_error{"invalid_argument"};
-        pthread_detach(pimpl->handle);
-        pimpl->joinable = false;
-        pimpl = nullptr;
+        pthread_detach(id_.handle);
+        id_ = id{};
     }
 
-    bool joinable() const { return pimpl && pimpl->joinable; }
+    id get_id() const noexcept { return id_; }
+
+    native_handle_type native_handle() { return id_.handle; }
 
 private:
     template<class Function, class... Args>
@@ -76,12 +101,27 @@ private:
     }
 
     struct impl {
-        pthread_t handle;
-        bool joinable = false;
         std::function<void(void)> func;
+        std::shared_ptr<impl> this_ptr;
     };
-    impl* pimpl = new impl{};
+    id id_;
 };
+
+inline bool operator!=(thread::id lhs, thread::id rhs) noexcept {
+    return !(lhs == rhs);
+}
+
+inline bool operator<=(thread::id lhs, thread::id rhs) noexcept {
+    return !(rhs < lhs);
+}
+
+inline bool operator>(thread::id lhs, thread::id rhs) noexcept {
+    return rhs < lhs;
+}
+
+inline bool operator>=(thread::id lhs, thread::id rhs) noexcept {
+    return !(lhs < rhs);
+}
 
 } /* namespace utility */
 

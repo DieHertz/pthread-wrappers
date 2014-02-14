@@ -9,9 +9,9 @@ using namespace std;
 using namespace utility;
 
 threadlocal<int> tlint;
+const synchronous<ostream&> sync_cout{ cout };
 
 int main() {
-    const synchronous<ostream&> sync_cout{ cout };
     auto tasks = vector<thread>{};
 
     for (auto i = 0; i < 10; ++i) {
