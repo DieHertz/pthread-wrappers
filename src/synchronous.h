@@ -2,7 +2,6 @@
 #define synchronous_h
 
 #include "mutex.h"
-#include <iostream>
 
 namespace utility {
 

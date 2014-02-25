@@ -21,7 +21,7 @@ public:
     native_handle_type native_handle() { return handle; }
 
 private:
-    pthread_mutex_t handle;
+    native_handle_type handle;
 };
 
 template<class Mutex> class lock_guard {
