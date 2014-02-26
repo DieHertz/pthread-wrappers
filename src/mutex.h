@@ -7,7 +7,7 @@ namespace utility {
 
 class mutex {
 public:
-    constexpr mutex() noexcept : handle(PTHREAD_MUTEX_INITIALIZER) {};
+    constexpr mutex() noexcept = default;
     ~mutex() { pthread_mutex_destroy(&handle); }
 
     mutex(const mutex&) = delete;
@@ -21,7 +21,7 @@ public:
     native_handle_type native_handle() { return handle; }
 
 private:
-    native_handle_type handle;
+    native_handle_type handle = PTHREAD_MUTEX_INITIALIZER;
 };
 
 template<class Mutex> class lock_guard {
