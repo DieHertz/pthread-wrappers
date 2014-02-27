@@ -14,7 +14,7 @@ public:
     mutex& operator=(const mutex&) = delete;
 
     void lock() { pthread_mutex_lock(&handle); }
-    bool try_lock() { return pthread_mutex_trylock(&handle); }
+    bool try_lock() { return !pthread_mutex_trylock(&handle); }
     void unlock() { pthread_mutex_unlock(&handle); }
 
     using native_handle_type = pthread_mutex_t;
